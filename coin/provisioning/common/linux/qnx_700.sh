@@ -37,14 +37,15 @@
 
 set -ex
 
+# shellcheck source=../unix/SetEnvVar.sh
 source "${BASH_SOURCE%/*}/../unix/SetEnvVar.sh"
 
 targetFolder="/opt/"
-sourceFile="http://ci-files01-hki.intra.qt.io/input/qnx/qnx700.tar.xz"
-sha1="949a87c5f00d0756956cb4b1b3b213ecaeee9113"
+sourceFile="http://ci-files01-hki.intra.qt.io/input/qnx/qnx700-20190325-2-linux.tar.xz"
+sha1="9fb115b2c84b8e7b6016a51cc421a763bda298a1"
 folderName="qnx700"
 targetFile="qnx700.tar.xz"
-wget --tries=5 --waitretry=5 --output-document="$targetFile" "$sourceFile"
+wget --tries=5 --waitretry=5 --progress=dot:giga --output-document="$targetFile" "$sourceFile"
 echo "$sha1  $targetFile" | sha1sum --check
 if [ ! -d "$targetFolder" ]; then
     mkdir -p $targetFolder
@@ -59,6 +60,7 @@ if [ ! -f $targetFolder/$folderName/qnxsdp-env.sh ]; then
 fi
 
 rm -rf $targetFile
+
 # Set env variables
 SetEnvVar "QNX_700" "$targetFolder$folderName"
 

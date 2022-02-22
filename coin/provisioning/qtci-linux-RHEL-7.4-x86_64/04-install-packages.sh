@@ -2,7 +2,7 @@
 
 #############################################################################
 ##
-## Copyright (C) 2017 The Qt Company Ltd.
+## Copyright (C) 2021 The Qt Company Ltd.
 ## Contact: http://www.qt.io/licensing/
 ##
 ## This file is part of the provisioning scripts of the Qt Toolkit.
@@ -35,6 +35,9 @@
 
 set -ex
 
+# Remove update notifications and packagekit running in the background
+sudo yum -y remove PackageKit gnome-software
+
 installPackages=()
 installPackages+=(git)
 installPackages+=(zlib-devel)
@@ -48,7 +51,6 @@ installPackages+=(mesa-libGL-devel)
 installPackages+=(libxkbfile-devel)
 # Xinput2
 installPackages+=(libXi-devel)
-installPackages+=(python-devel)
 installPackages+=(mysql-server)
 installPackages+=(mysql)
 installPackages+=(mysql-devel)
@@ -61,11 +63,14 @@ installPackages+=(gstreamer1-plugins-base-devel)
 # gtk3 style for QtGui/QStyle
 installPackages+=(gtk3-devel)
 # libusb1 for tqtc-boot2qt/qdb
-installPackages+=(libusb-devel)
+installPackages+=(libusbx-devel)
 # speech-dispatcher-devel for QtSpeech, otherwise it has no backend on Linux
 installPackages+=(speech-dispatcher-devel)
-# Python
-installPackages+=(python-devel python-virtualenv)
+# Python 2 devel and pip. python-pip requires the EPEL repository to be added
+installPackages+=(python-devel python-pip)
+# Python 3 with python-devel, pip and virtualenv
+installPackages+=(rh-python36)
+installPackages+=(python36-devel)
 # WebEngine
 installPackages+=(bison)
 installPackages+=(flex)
@@ -86,6 +91,51 @@ installPackages+=(bluez-libs-devel)
 # QtWebKit
 installPackages+=(libxml2-devel)
 installPackages+=(libxslt-devel)
+# For building Wayland from source
+installPackages+=(libffi-devel)
+# QtWayland
+installPackages+=(mesa-libwayland-egl)
+installPackages+=(mesa-libwayland-egl-devel)
+installPackages+=(libwayland-client)
+installPackages+=(libwayland-cursor)
+installPackages+=(libwayland-server)
+# Jenkins
+installPackages+=(chrpath)
+# libxkbcommon
+installPackages+=(libxkbcommon-devel)
+installPackages+=(libxkbcommon-x11-devel)
+# xcb-util-* libraries
+installPackages+=(xcb-util-devel)
+installPackages+=(xcb-util-image-devel)
+installPackages+=(xcb-util-keysyms-devel)
+installPackages+=(xcb-util-wm-devel)
+installPackages+=(xcb-util-renderutil-devel)
+# ODBC support
+installPackages+=(unixODBC-devel)
+installPackages+=(unixODBC)
+# Vulkan support
+installPackages+=(vulkan-devel)
 
-sudo yum -y update
 sudo yum -y install "${installPackages[@]}"
+
+sudo ln -s /opt/rh/rh-python36/root/usr/bin/python3 /usr/local/bin/python3
+sudo ln -s /opt/rh/rh-python36/root/usr/bin/pip3 /usr/local/bin/pip3
+# We shouldn't use yum to install virtualenv. The one found from package repo is not
+# working, but we can use installed pip
+sudo pip install --upgrade "pip < 21.0"
+sudo pip install virtualenv wheel
+
+# Needed by packaging scripts
+sudo /usr/local/bin/pip3 install colorlog --user
+
+sudo /usr/local/bin/pip3 install wheel
+# Install all needed packages in a special wheel cache directory
+/usr/local/bin/pip3 wheel --wheel-dir "$HOME/python3-wheels" -r "${BASH_SOURCE%/*}/../common/shared/requirements.txt"
+
+# shellcheck source=../common/unix/SetEnvVar.sh
+source "${BASH_SOURCE%/*}/../common/unix/SetEnvVar.sh"
+SetEnvVar "PYTHON3_WHEEL_CACHE" "$HOME/python3-wheels"
+
+gccVersion="$(gcc --version |grep gcc |cut -b 11-16)"
+echo "GCC = $gccVersion" >> versions.txt
+
